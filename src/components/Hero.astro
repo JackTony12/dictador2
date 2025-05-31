@@ -1,0 +1,206 @@
+---
+import "../styles/global.css"
+import Info from "./Info"
+---
+
+<main class='my-0 mx-auto w-[100%] pt-43 sm:w-[80%]'>
+    <div class='py-4'>
+        <h1 class='font-black text-3xl text-gray-700'>Dictador de texto</h1>
+    </div>
+    <div
+        class='flex flex-col gap-4 rounded-xl sm:flex-row p-8 bg-white shadow-2xl'
+    >
+        <textarea
+            class='resize-none border border-gray-400 p-4 rounded-lg'
+            id='textarea'
+            rows='10'
+            placeholder='Escribe aquí el texto que quieres dictar...'
+            cols='100'
+            maxlength={2000}></textarea>
+        <div
+            class='border border-gray-400 p-4 rounded-xl w-[100%] sm:w-[400px] relative'
+        >
+            <div class='border border-gray-300 p-2 rounded-lg'>
+                <label>Palabras por grupo: <Info client:load index={0} /></label
+                >
+
+                <select id='wordsPerGroup'>
+                    <option value='3'>3</option>
+                    <option value='5'>5</option>
+                    <option value='10'>10</option>
+                </select>
+            </div>
+            <div class='border border-gray-300 p-2 rounded-lg mt-1'>
+                <label>Tiempo de pausa: <Info client:load index={1} /></label>
+                <input
+                    type='number'
+                    id='pauseTime'
+                    value='2'
+                    min='1'
+                    max='10'
+                />
+            </div>
+            <div class='border border-gray-300 p-2 rounded-lg mt-1'>
+                <label
+                    >Repeticiones por oracion <Info client:load index={2} />
+                </label>
+                <select id='timesToRepeat'>
+                    <option value='1'>1</option>
+                    <option value='2'>2</option>
+                    <option value='3'>3</option>
+                    <option value='4'>4</option>
+                    <option value='5'>5</option>
+                </select>
+            </div>
+            <div class='flex flex-col'>
+                <div class='border border-gray-300 p-2 rounded-lg mt-1'>
+                    <label class='block' for='rate'
+                        >Velocidad <span id='rate_value'>1</span><Info
+                            client:load
+                            index={3}
+                        /></label
+                    >
+                    <input
+                        type='range'
+                        min='0.1'
+                        max='1.5'
+                        step='0.1'
+                        value='1'
+                        id='rate'
+                    />
+                </div>
+                <div>
+                    <button id='play' class='btn_play mt-4'>Dictar</button>
+                    <button id='stop' class='btn_stop mt-4'>Cancelar</button>
+                    <button id='pause' class='btn_pause mt-4'>Pausar</button>
+                    <button id='continue' class='btn_resume mt-4'>Seguir</button
+                    >
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class='text-center mt-4'>
+        <a target='_blank' href='https://antonyleonel.com'>AntonyLeonel.com</a>
+    </div>
+</main>
+<script>
+    const symbolMap: Record<string, string> = {
+        ",": "coma",
+        ".": "punto",
+        ":": "dos puntos",
+        ";": "punto y coma",
+        "?": "signo de interrogación",
+        "!": "signo de exclamación",
+        "=>": "flecha",
+        "->": "flecha",
+        "(": "paréntesis abierto",
+        ")": "paréntesis cerrado",
+        "[": "corchete abierto",
+        "]": "corchete cerrado",
+        "{": "llave abierta",
+        "}": "llave cerrada",
+        '"': "comillas",
+        "'": "comilla",
+        "=": "igual",
+        "+": "más",
+        "-": "menos",
+        "*": "asterisco",
+        "/": "diagonal",
+        "\\": "diagonal invertida",
+        "#": "numeral",
+        "@": "arroba",
+        "&": "y comercial",
+        "%": "por ciento",
+    }
+    const $textarea = document.getElementById("textarea") as HTMLTextAreaElement
+    const $buttonPlay = document.querySelector("#play") as HTMLButtonElement
+    const $buttonCancel = document.querySelector("#stop") as HTMLButtonElement
+    const $buttonPause = document.querySelector("#pause") as HTMLButtonElement
+    const $buttonContinue = document.querySelector(
+        "#continue",
+    ) as HTMLButtonElement
+    const $wordsPerGroup = document.getElementById(
+        "wordsPerGroup",
+    ) as HTMLSelectElement
+    const $pauseTime = document.getElementById("pauseTime") as HTMLInputElement
+    const $timesToRepeat = document.getElementById(
+        "timesToRepeat",
+    ) as HTMLSelectElement
+
+    const $rate = document.getElementById("rate") as HTMLInputElement
+    const $rateValue = document.getElementById("rate_value") as HTMLSpanElement
+    let rate = 1
+    $rate.addEventListener("change", () => {
+        const ratevalue = $rate.value
+        $rateValue.textContent = ratevalue
+        rate = parseFloat(ratevalue)
+    })
+
+    $buttonPlay.addEventListener("click", async () => {
+        const rawText = $textarea.value.trim()
+        const preprocessedText = reemplazarSimbolos(rawText)
+        const words = preprocessedText.split(/\s+/)
+        const wordsPerGroup = parseInt($wordsPerGroup.value)
+        const pauseTime = parseInt($pauseTime.value) * 1000
+        const repeatCount = parseInt($timesToRepeat.value)
+
+        for (let i = 0; i < words.length; i += wordsPerGroup) {
+            const chunk = words.slice(i, i + wordsPerGroup).join(" ")
+            for (let r = 0; r < repeatCount; r++) {
+                await speakText(chunk)
+                await delay(pauseTime)
+            }
+            if (i + wordsPerGroup < words.length) {
+                await delay(pauseTime)
+            }
+        }
+    })
+    $buttonCancel.addEventListener("click", () => {
+        if (speechSynthesis.speaking) {
+            speechSynthesis.cancel()
+            console.log("Dictado detenido")
+        }
+    })
+    $buttonPause.addEventListener("click", () => {
+        if (speechSynthesis.speaking) {
+            speechSynthesis.pause()
+            console.log("Dictado detenido")
+        }
+    })
+    $buttonContinue.addEventListener("click", () => {
+        if (speechSynthesis.speaking) {
+            speechSynthesis.resume()
+            console.log("Dictado detenido")
+        }
+    })
+    function reemplazarSimbolos(texto: string) {
+        const sortedSymbols = Object.keys(symbolMap).sort(
+            (a, b) => b.length - a.length,
+        )
+
+        for (const simbolo of sortedSymbols) {
+            const palabra = symbolMap[simbolo]
+            const escapedSimbolo = simbolo.replace(
+                /[-\/\\^$*+?.()|[\]{}]/g,
+                "\\$&",
+            )
+            const regex = new RegExp(escapedSimbolo, "g")
+            texto = texto.replace(regex, ` ${palabra} `)
+        }
+
+        return texto
+    }
+
+    function speakText(text: string): Promise<void> {
+        return new Promise((resolve) => {
+            const utterance = new SpeechSynthesisUtterance(text)
+            utterance.onend = () => resolve()
+            utterance.rate = rate
+            speechSynthesis.speak(utterance)
+        })
+    }
+
+    function delay(ms: number): Promise<void> {
+        return new Promise((resolve) => setTimeout(resolve, ms))
+    }
+</script>
