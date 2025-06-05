@@ -1,14 +1,19 @@
 ---
 import "../styles/global.css"
 import Info from "./Info"
+import Spiner from "./spiner.astro"
 ---
 
-<main class='my-0 mx-auto w-[100%] pt-43 sm:w-[80%]'>
+<main class='my-0 mx-auto w-[100%] pt-43 md:w-[80%]'>
     <div class='py-4'>
-        <h1 class='font-black text-3xl text-gray-700'>Dictador de texto</h1>
+        <h1 class='font-black text-3xl text-gray-700'>
+            Dictador de texto <span id='spinner'
+                ><Spiner /><small class='text-sm'> Dictando...</small></span
+            >
+        </h1>
     </div>
     <div
-        class='flex flex-col gap-4 rounded-xl sm:flex-row p-8 bg-white shadow-2xl'
+        class='flex flex-col gap-4 rounded-xl md:flex-row p-8 bg-white shadow-2xl'
     >
         <textarea
             class='resize-none border border-gray-400 p-4 rounded-lg'
@@ -18,7 +23,7 @@ import Info from "./Info"
             cols='100'
             maxlength={2000}></textarea>
         <div
-            class='border border-gray-400 p-4 rounded-xl w-[100%] sm:w-[400px] relative'
+            class='border border-gray-400 p-4 rounded-xl w-[100%] md:w-[400px] relative'
         >
             <div class='border border-gray-300 p-2 rounded-lg'>
                 <label>Palabras por grupo: <Info client:load index={0} /></label
@@ -61,6 +66,7 @@ import Info from "./Info"
                         /></label
                     >
                     <input
+                        class='cursor-grab active:cursor-grabbing'
                         type='range'
                         min='0.1'
                         max='1.5'
@@ -69,7 +75,7 @@ import Info from "./Info"
                         id='rate'
                     />
                 </div>
-                <div>
+                <div class='flex items-center gap-2 flex-col'>
                     <button id='play' class='btn_play mt-4'>Dictar</button>
                     <button id='stop' class='btn_stop mt-4'>Cancelar</button>
                     <button id='pause' class='btn_pause mt-4'>Pausar</button>
@@ -129,6 +135,8 @@ import Info from "./Info"
 
     const $rate = document.getElementById("rate") as HTMLInputElement
     const $rateValue = document.getElementById("rate_value") as HTMLSpanElement
+    const $spinner = document.getElementById("spinner") as HTMLDivElement
+    $spinner.style.display = "none"
     let rate = 1
     $rate.addEventListener("change", () => {
         const ratevalue = $rate.value
@@ -173,6 +181,7 @@ import Info from "./Info"
             console.log("Dictado detenido")
         }
     })
+
     function reemplazarSimbolos(texto: string) {
         const sortedSymbols = Object.keys(symbolMap).sort(
             (a, b) => b.length - a.length,
@@ -191,11 +200,22 @@ import Info from "./Info"
         return texto
     }
 
+    function showSpinnerWhileSpeaking() {
+        const interval = setInterval(() => {
+            if (speechSynthesis.speaking) {
+                $spinner.style.display = "inline-block"
+            } else {
+                $spinner.style.display = "none"
+                clearInterval(interval)
+            }
+        }, 100)
+    }
     function speakText(text: string): Promise<void> {
         return new Promise((resolve) => {
             const utterance = new SpeechSynthesisUtterance(text)
             utterance.onend = () => resolve()
             utterance.rate = rate
+            utterance.onstart = () => showSpinnerWhileSpeaking()
             speechSynthesis.speak(utterance)
         })
     }

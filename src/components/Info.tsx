@@ -1,4 +1,3 @@
-import React from 'react'
 import { useState } from 'react'
 
 const Info = ({ index }: { index: number }) => {
@@ -18,7 +17,7 @@ const Info = ({ index }: { index: number }) => {
         }
         , {
             title: 'Velocidad de lectura',
-            description: ' Define la velocidad de lectura del speaker. Si cambias la velocidad mientras ya está hablando, el cambio solo se aplicará desde siguiente frase que lea, no desde la actual',
+            description: ' Define la velocidad de lectura del speaker. Si cambias la velocidad mientras ya está hablando, el cambio se aplicará desde siguiente frase que lea, no desde la actual',
         }
     ]
 
