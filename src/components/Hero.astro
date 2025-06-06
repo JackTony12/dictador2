@@ -152,6 +152,7 @@ import Spiner from "./spiner.astro"
         const pauseTime = parseInt($pauseTime.value) * 1000
         const repeatCount = parseInt($timesToRepeat.value)
 
+        showSpinner()
         for (let i = 0; i < words.length; i += wordsPerGroup) {
             const chunk = words.slice(i, i + wordsPerGroup).join(" ")
             for (let r = 0; r < repeatCount; r++) {
@@ -162,23 +163,24 @@ import Spiner from "./spiner.astro"
                 await delay(pauseTime)
             }
         }
+        endSpinner()
     })
     $buttonCancel.addEventListener("click", () => {
         if (speechSynthesis.speaking) {
             speechSynthesis.cancel()
-            console.log("Dictado detenido")
+            endSpinner()
         }
     })
     $buttonPause.addEventListener("click", () => {
         if (speechSynthesis.speaking) {
             speechSynthesis.pause()
-            console.log("Dictado detenido")
+            endSpinner()
         }
     })
     $buttonContinue.addEventListener("click", () => {
         if (speechSynthesis.speaking) {
             speechSynthesis.resume()
-            console.log("Dictado detenido")
+            showSpinner()
         }
     })
 
@@ -200,23 +202,18 @@ import Spiner from "./spiner.astro"
         return texto
     }
 
-    function showSpinnerWhileSpeaking() {
-        const interval = setInterval(() => {
-            if (speechSynthesis.speaking) {
-                $spinner.style.display = "inline-block"
-            } else {
-                $spinner.style.display = "none"
-                clearInterval(interval)
-            }
-        }, 100)
+    function showSpinner() {
+        $spinner.style.display = "inline-block"
+    }
+    function endSpinner() {
+        $spinner.style.display = "none"
     }
     function speakText(text: string): Promise<void> {
         return new Promise((resolve) => {
             const utterance = new SpeechSynthesisUtterance(text)
-            utterance.onend = () => resolve()
             utterance.rate = rate
-            utterance.onstart = () => showSpinnerWhileSpeaking()
             speechSynthesis.speak(utterance)
+            utterance.onend = () => resolve()
         })
     }
 
